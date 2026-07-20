@@ -1,0 +1,52 @@
+# docker-compose.yml
+# Full containerized stack (postgres + backend + frontend). Separate from the
+# root compose.yaml, which is a postgres-only file auto-managed by Spring
+# Boot's docker-compose support for local (non-containerized) dev - keeping
+# them apart avoids Spring Boot trying to manage this file's backend/frontend
+# services when running the app locally via mvnw.
+#
+# Run with: docker compose -f docker-compose.yml up --build
+
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-clinic_db}
+      POSTGRES_USER: ${POSTGRES_USER:-clinic_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clinic_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-clinic_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-clinic_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-clinic_password}
+      JWT_SECRET: ${JWT_SECRET:-9a4f2c8d3b7a1e5f6c8d9a0b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres_data:
