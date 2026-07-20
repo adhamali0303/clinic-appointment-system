@@ -9,12 +9,14 @@ package com.example.clinicappointmentsystem.dto;
  * @param name      the linked user's name
  * @param email     the linked user's email
  * @param specialty the doctor's medical specialty
+ * @param status    whether the doctor can currently be booked (ACTIVE or INACTIVE)
  */
 public record DoctorResponse(
         Long id,
         Long userId,
         String name,
         String email,
-        String specialty
+        String specialty,
+        String status
 ) {
 }

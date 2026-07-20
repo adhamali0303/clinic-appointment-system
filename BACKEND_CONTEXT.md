@@ -61,11 +61,12 @@ Note: RegisterRequest.role must be one of ADMIN/RECEPTIONIST/DOCTOR. The respons
 | POST | / | ADMIN | DoctorRequest{userId, specialty} | 201 DoctorResponse |
 | PUT | /{id} | ADMIN | DoctorRequest{userId, specialty} | 200 DoctorResponse |
 | DELETE | /{id} | ADMIN | - | 204 |
+| PATCH | /{id}/status | ADMIN | DoctorStatusRequest{status} | 200 DoctorResponse |
 | GET | /{id}/availability?date=YYYY-MM-DD | any authenticated | - | 200 List of TimeSlotResponse{startTime, endTime} |
 
-DoctorResponse: {id, userId, name, email, specialty}. DoctorRequest.userId must reference an existing User (no server-side check that its role is DOCTOR).
+DoctorResponse: {id, userId, name, email, specialty, status}. DoctorRequest.userId must reference an existing User (no server-side check that its role is DOCTOR). status is one of ACTIVE/INACTIVE (see below) - it is read-only via DoctorRequest; only PATCH /{id}/status changes it.
 
-Doctors also have an internal status (ACTIVE/INACTIVE, defaults to ACTIVE on creation) that gates booking - a booking against an INACTIVE doctor returns 400. There is currently no API to view or change this status (not in DoctorRequest/DoctorResponse); it can only be changed directly in the database today.
+Doctors have a status (ACTIVE/INACTIVE, defaults to ACTIVE on creation) that gates booking - a booking against an INACTIVE doctor returns 400. DoctorStatusRequest.status must be exactly "ACTIVE" or "INACTIVE". This PATCH is logged to the audit trail as action "DOCTOR_STATUS_UPDATED".
 
 ### Patients (/api/v1/patients)
 
@@ -108,9 +109,17 @@ Reschedule note: AppointmentRequestDto.doctorId/patientId are still required fie
 
 Search filters on GET /appointments: startDate/endDate are calendar dates (YYYY-MM-DD), inclusive of startDate and exclusive of the day after endDate. All filters are optional and combine with AND.
 
-### Audit Log
+### Audit Log (/api/v1/audit-logs)
 
-Not exposed via any REST endpoint. Every create/update/delete on Doctors, Patients, Availability, and Appointments (book/cancel/reschedule) is recorded server-side (AuditLogService writes to the audit_log table: action, performedBy email, timestamp, details), but there is currently no API to read it back.
+| Method | Path | Role | Request Body | Response |
+|---|---|---|---|---|
+| GET | /?action=&limit= | ADMIN | - | 200 List of AuditLogResponse{id, action, performedBy, timestamp, details} |
+
+Every create/update/delete on Doctors (including status changes), Patients, Availability, and Appointments (book/cancel/reschedule) is recorded server-side (AuditLogService writes to the audit_log table: action, performedBy email, timestamp, details) and is now readable via this endpoint.
+
+Results are ordered by timestamp descending (most recent first). Both query params are optional and combine with AND: `action` filters to an exact action-code match; `limit` caps the number of rows returned and defaults to 20 if omitted or non-positive.
+
+Action codes currently written: `DOCTOR_CREATED`, `DOCTOR_UPDATED`, `DOCTOR_DELETED`, `DOCTOR_STATUS_UPDATED`, `PATIENT_CREATED`, `PATIENT_UPDATED`, `PATIENT_DELETED`, `AVAILABILITY_CREATED`, `AVAILABILITY_UPDATED`, `AVAILABILITY_DELETED`, `APPOINTMENT_BOOKED`, `APPOINTMENT_CANCELLED`, `APPOINTMENT_RESCHEDULED`.
 
 ## Key Business Rules for the Frontend
 

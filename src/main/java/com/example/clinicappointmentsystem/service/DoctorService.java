@@ -88,6 +88,27 @@ public class DoctorService {
         auditLogService.log("DOCTOR_DELETED", currentUserEmail(), "Deleted doctor id=" + id);
     }
 
+    /**
+     * Flips a doctor's bookable status (ACTIVE/INACTIVE), and records the change.
+     *
+     * @throws ResourceNotFoundException if no doctor has that id
+     */
+    public DoctorResponse updateStatus(Long id, Doctor.Status status) {
+        Doctor doctor = getDoctorOrThrow(id);
+        Doctor.Status oldStatus = doctor.getStatus();
+
+        doctor.setStatus(status);
+        Doctor saved = doctorRepository.save(doctor);
+
+        auditLogService.log(
+                "DOCTOR_STATUS_UPDATED",
+                currentUserEmail(),
+                "Doctor " + saved.getUser().getName() + " (id=" + saved.getId() + ") status: "
+                        + oldStatus + " -> " + status
+        );
+        return toResponse(saved);
+    }
+
     private Doctor getDoctorOrThrow(Long id) {
         return doctorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id: " + id));
@@ -104,7 +125,8 @@ public class DoctorService {
                 doctor.getUser().getId(),
                 doctor.getUser().getName(),
                 doctor.getUser().getEmail(),
-                doctor.getSpecialty()
+                doctor.getSpecialty(),
+                doctor.getStatus().name()
         );
     }
 

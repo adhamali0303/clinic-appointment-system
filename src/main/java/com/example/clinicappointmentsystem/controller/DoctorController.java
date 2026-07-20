@@ -3,6 +3,7 @@ package com.example.clinicappointmentsystem.controller;
 
 import com.example.clinicappointmentsystem.dto.DoctorRequest;
 import com.example.clinicappointmentsystem.dto.DoctorResponse;
+import com.example.clinicappointmentsystem.dto.DoctorStatusRequest;
 import com.example.clinicappointmentsystem.dto.TimeSlotResponse;
 import com.example.clinicappointmentsystem.service.DoctorAvailabilityService;
 import com.example.clinicappointmentsystem.service.DoctorService;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -78,6 +80,17 @@ public class DoctorController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         doctorService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Flips a doctor's bookable status (ACTIVE/INACTIVE). ADMIN only. Status
+     * changes only ever happen through this endpoint, never through the
+     * general create/update payload.
+     */
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public DoctorResponse updateStatus(@PathVariable Long id, @Valid @RequestBody DoctorStatusRequest request) {
+        return doctorService.updateStatus(id, request.status());
     }
 
     /**
