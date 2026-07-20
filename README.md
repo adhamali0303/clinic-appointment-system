@@ -43,12 +43,11 @@ no manual setup needed to have real data to click through.
 
 ## How to Run
 
-### Quick start with Docker (database only)
+### Quick start with Docker (database only, for local/manual dev)
 
-A `compose.yaml` at the project root defines the PostgreSQL container the
-backend expects (`clinic_db` / `clinic_user` / `clinic_password`, exposed on
-host port **5433**). There's no full containerization of the backend/frontend
-themselves — only the database.
+A `compose.yaml` at the project root defines just the PostgreSQL container the
+*locally-run* backend expects (`clinic_db` / `clinic_user` / `clinic_password`,
+exposed on host port **5433**).
 
 ```bash
 docker compose up -d
@@ -58,6 +57,10 @@ Spring Boot's Docker Compose support will also auto-start this container for
 you the first time you run the backend (`mvnw spring-boot:run`), as long as
 Docker Desktop is running — you can usually skip this step and let it happen
 automatically.
+
+To run the *entire* app (database + backend + frontend) in containers instead
+of running the backend/frontend locally, see
+[Running with Docker](#running-with-docker) below.
 
 ### Manual / local setup
 
@@ -82,6 +85,44 @@ Starts the Vite dev server, by default on `http://localhost:5173`. The
 backend's CORS config allows origins `5173`–`5175` for local development.
 
 Log in with any of the [demo accounts](#demo-accounts) above.
+
+## Running with Docker
+
+For running the whole app — database, backend, and frontend — in containers,
+without installing Java, Maven, or Node locally. Uses `docker-compose.yml` at
+the project root (a separate file from the `compose.yaml` above, which only
+covers the database for local/manual dev).
+
+```bash
+docker compose -f docker-compose.yml up --build
+```
+
+This builds and starts three services:
+
+| Service | Image/build | Host port | Notes |
+|---|---|---|---|
+| `postgres` | `postgres:latest` | not exposed to host | Named volume `postgres_data`; healthcheck via `pg_isready` |
+| `backend` | multi-stage Maven → JRE build (`Dockerfile`) | `8080` | Waits for postgres to be healthy; runs Flyway migrations (schema + demo seed data) automatically on startup |
+| `frontend` | multi-stage Node → nginx build (`frontend/Dockerfile`) | `5173` (→ container port 80) | Static build served by nginx, with SPA fallback routing |
+
+Once all three are up, open `http://localhost:5173` and log in with any of the
+[demo accounts](#demo-accounts) above.
+
+**Configuration**: DB credentials and the JWT secret are passed as environment
+variables in `docker-compose.yml` with demo-only defaults (`POSTGRES_DB`,
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, `JWT_SECRET`) — override them (e.g. via
+a `.env` file next to `docker-compose.yml`) rather than relying on the
+defaults for anything beyond local demo use. The frontend's API base URL
+(`VITE_API_BASE_URL`) is a **build-time** arg (Vite inlines it at build time,
+not runtime) — it defaults to `http://localhost:8080`, which works as-is
+because the browser calls the backend directly via its host-exposed port, not
+through the frontend container.
+
+To stop and remove everything, including the database volume:
+
+```bash
+docker compose -f docker-compose.yml down -v
+```
 
 ## API Documentation
 
@@ -120,7 +161,8 @@ actual controllers.
   readable by ADMINs through `GET /api/v1/audit-logs` (optional `action` /
   `limit` filters, most recent first).
 
-## Entity-Relationship Diagram
+## Entity-Relationship Diagram 'ERD'
+![Entity Relationship Diagram](./docs/ERD.png)
 
 ```mermaid
 erDiagram
