@@ -1,4 +1,4 @@
-// src/main/java/com/example/clinicappointmentsystem/model/Doctor.java
+// src/main/java/com/example/clinicappointmentsystem/model/Appointment.java
 package com.example.clinicappointmentsystem.model;
 
 import jakarta.persistence.Column;
@@ -9,7 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,38 +17,44 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 /**
- * JPA entity mapping the {@code doctors} table.
- * Extends a {@link User} account with clinical details, one-to-one via {@code user_id}.
+ * JPA entity mapping the {@code appointments} table.
+ * Used here to compute booked time ranges when resolving doctor availability.
  */
 @Entity
-@Table(name = "doctors")
+@Table(name = "appointments")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Doctor {
+public class Appointment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private User user;
+    @ManyToOne
+    @JoinColumn(name = "doctor_id", nullable = false)
+    private Doctor doctor;
 
-    @Column(nullable = false, length = 100)
-    private String specialty;
+    @ManyToOne
+    @JoinColumn(name = "patient_id", nullable = false)
+    private Patient patient;
+
+    @Column(name = "appointment_date_time", nullable = false)
+    private LocalDateTime appointmentDateTime;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private Status status;
 
     /**
-     * Whether a doctor can currently be booked.
+     * Lifecycle states of a booked appointment.
      */
     public enum Status {
-        ACTIVE, INACTIVE
+        SCHEDULED, COMPLETED, CANCELED
     }
 }

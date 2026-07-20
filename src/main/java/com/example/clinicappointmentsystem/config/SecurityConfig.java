@@ -1,6 +1,10 @@
 // src/main/java/com/example/clinicappointmentsystem/config/SecurityConfig.java
 package com.example.clinicappointmentsystem.config;
-
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import com.example.clinicappointmentsystem.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -26,6 +30,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@OpenAPIDefinition(
+        info = @Info(title = "Clinic Appointment System API", version = "v1"),
+        security = @SecurityRequirement(name = "BearerAuth")
+)
+@SecurityScheme(
+        name = "BearerAuth",
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer",
+        bearerFormat = "JWT"
+)
 public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
